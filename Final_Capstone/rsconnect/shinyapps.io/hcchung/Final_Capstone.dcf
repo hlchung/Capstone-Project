@@ -1,0 +1,12 @@
+name: Final_Capstone
+title: Final_Capstone
+username:
+account: hcchung
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 1085676
+bundleId: 2317952
+url: https://hcchung.shinyapps.io/Final_Capstone/
+when: 1565771223.17785
+asMultiple: FALSE
+asStatic: FALSE
