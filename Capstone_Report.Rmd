@@ -1,0 +1,140 @@
+---
+title: "Data Science Capstone Project Progress Report"
+author: "H. Chung"
+date: "8/13/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## **1.0 Introduction**
+This document presents a brief progress report for the Final Capstone Project of Coursera. The objective of this report is to provide an Exploratory Data Analysis which eventually leads to creating a prediction algorithm application. 
+
+## **2.0 Project Objective**
+The objective of this project report are: 
+
+1. Demonstrate that [the data](https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip) has been downloaded and successfully loaded in the local desktop/laptop; 
+2. Create a basic summary statistics report about the datasets; and
+3. Report any interesting findings in the datasets. 
+
+## **3.0 Data Exploration**
+### 3.1 Downloading and Loading the Data 
+As previously mentioned, [the data](https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip) is to be downloaded and saved locally. After downloading the *zip file*, load the three (3) datasets which will be evaluated:  
+<ul> <li>en_US.blogs.txt  
+<li> en_US.news.txt
+<li> en_US.twitter.txt
+</ul>
+
+*The different codes used in the data exploration can be found [here](https://github.com/hlchung/Capstone-Project)*
+
+```{r, message=FALSE, warning=FALSE, error=FALSE}
+library(knitr)
+library(tm)
+library(stringi)
+library(textmineR)
+library(RWeka)
+library(RColorBrewer)
+library(wordcloud)
+
+blogs <- readLines('en_US.blogs.txt', encoding = 'UTF-8', skipNul = TRUE)
+
+news <- readLines('en_US.news.txt', encoding = 'UTF-8', skipNul = TRUE)
+
+twitter <- readLines('en_US.twitter.txt', encoding = 'UTF-8', skipNul = TRUE)
+```
+
+### 3.2 Initial Data Summary 
+The table below shows the summary of the datasets being evaluated and to be used in the predictive algorithm.
+```{r}
+summary <- data.frame(
+  File.Name = c('en_US.blogs.txt', 'en_US.news.txt', 'en_US.twitter.txt'), 
+  File.Size.in.MB = c(file.info('en_US.blogs.txt')$size/1024^2, file.info('en_US.news.txt')$size/1024^2, file.info('en_US.twitter.txt')$size/1024^2),
+  t(rbind(sapply(list(blogs, news, twitter), stri_stats_general),
+          Word.Count=sapply(list(blogs, news, twitter), stri_stats_latex)[4,])))
+kable(summary)
+```
+
+### 3.3 Obtaining Data Sample for Analysis
+The three datasets will be analyzed individually, hence, the number of samples gotten from each dataset will be equal. In this case, a sample of 0.5% of total number of lines are gotten from each file.
+
+```{r}
+set.seed(123)
+data.sample <- c(sample(blogs, length(blogs) * 0.01),
+                 sample(news, length(news) * 0.01),
+                 sample(twitter, length(twitter) * 0.01))
+```
+
+### 3.4 Sample Data Cleaning
+The different data cleaning steps are performed on the sample data to create a corpus:  
+
+- Converting the words to lowercase 
+- Removing the punctuation marks 
+- Removing numerical inputs 
+- Stripping the whitespaces 
+- Removing of English stopwords 
+
+Afterwards, a Document Term Matrix (DTM) is created for each corpus. 
+
+### 3.5 Exploratory Plots 
+#### **N-Grams Tokenization**
+The sample datasets were merged into one file and provides the following evaluation based on N-Grams. 
+
+#### 1-Gram 
+```{r, warning = FALSE}
+corpus <- VCorpus(VectorSource(data.sample))
+corpus <- tm_map(corpus, removePunctuation)
+corpus <- tm_map(corpus, removeNumbers)
+corpus <- tm_map(corpus, stripWhitespace)
+```
+
+```{r, warning=FALSE, error = FALSE}
+corpusDf <- data.frame(text=unlist(sapply(corpus$content,`[`, "content")),stringsAsFactors=F)
+
+findNGrams <- function(corp, grams) {
+  ngram <- NGramTokenizer(corp, Weka_control(min = grams, max = grams, delimiters = " \\r\\n\\t.,;:\"()?!"))
+  ngram2 <- data.frame(table(ngram))
+  #pick only top 25
+  ngram3 <- ngram2[order(ngram2$Freq,decreasing = TRUE),][1:100,]
+  colnames(ngram3) <- c("String","Count")
+  ngram3
+}
+
+UniGrams <- findNGrams(corpusDf, 1)
+BiGrams <- findNGrams(corpusDf, 2)
+TriGrams <- findNGrams(corpusDf, 3)
+
+par(mfrow = c(1, 1))
+palette <- brewer.pal(8,"Dark2")
+wordcloud(UniGrams[,1], UniGrams[,2], scale=c(3,1), min.freq =1, 
+          max.words=Inf, random.order = F, colors=palette)
+text(x=0.5, y=0, "Unigram Word Cloud")
+
+par(mfrow = c(1, 1))
+barplot(UniGrams[1:10,2], cex.names=1, names.arg=UniGrams[1:10,1], col="darkblue", main="Histogram for Unigrams", las=2)
+```
+
+#### 2-Grams
+```{r}
+wordcloud(BiGrams[,1], BiGrams[,2], scale = c(3, 1), min.freq = 1, max.words=Inf, random.order = F, ordered.colors = F, colors = palette)
+text(x=0.5, y=0, " Bigram Word Cloud")
+
+barplot(BiGrams[1:10,2], cex.names=1, names.arg=BiGrams[1:10,1], col="darkblue", main="Histogram for Bigrams", las=2)
+```
+
+#### 3-Grams
+```{r, warning=FALSE, error = FALSE}
+wordcloud(TriGrams[,1], TriGrams[,2], scale = c(3, 1), min.freq = 1, max.words=Inf, random.order = F, ordered.colors = F, colors = palette)
+text(x=0.5, y=0, "Trigram Word Cloud")
+
+barplot(TriGrams[1:10,2], cex.names=1, names.arg=TriGrams[1:10,1], col="darkblue ", main="Histogram for Trigrams", las=2)
+```
+
+## **4.0 Plans for Final Project**
+
+1. Create a larger corpus size from the original blogs, news and twitter and tokenize it (2-gram and 3-gram). Possible to split the corpus onto multiple parts and create the 2-gram and 3-gram matrix independently then to recombine them as one. 
+
+2. Create prediction algorithm by comparing the input to the 2-gram and 3-gram matrix. 
+
+3. Optimize the codes to allow faster processing.
