@@ -30,25 +30,18 @@ shinyServer <- function(input, output, session) {
             thirdword <- predict_list[[1]][3]
         })
         
-        time <- reactive({
-            inputText <- input$text
-            predict_list <- predictText(inputText,ngram_models)
-            time <- paste("Run Time: ", sprintf("%.2f", predict_list[[3]][1]), " S")
-        })
-        
         topwords <- reactive({
             inputText <- input$text
             predict_list <- predictText(inputText,ngram_models)
             lng <- length(predict_list[[1]])
-            topwords <- data_frame("Top Words Predicted" = predict_list[[1]])
-            if (lng > 6){
-                lng = 6
+            topwords <- data_frame("Top 5 Predicted Words" = predict_list[[1]])
+            if (lng > 5){
+                lng = 5
             }
             topwords <- topwords[1:lng,]
         })
         
         output$nextword <- renderText(nextword()) 
-        output$time <- renderText(time())
         output$topwords <- renderTable(topwords())
         
         output$nextword <- renderUI({
